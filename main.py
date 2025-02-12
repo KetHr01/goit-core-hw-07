@@ -21,15 +21,18 @@ class Phone(Field):
 class Birthday(Field):
     def __init__(self, value):
         try:
-            self.date = datetime.strptime(value, "%d.%m.%Y")
+            datetime.strptime(value, "%d.%m.%Y")  
         except ValueError:
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
+        super().__init__(value)  
+
     def __str__(self):
-        return self.date.strftime("%d.%m.%Y")
+        return self.value
     def is_valid(self):
         # Перевірка чи дата народження не знаходиться в майбутньому
         today = datetime.now()
-        return self.date <= today
+        birth_date = datetime.strptime(self.value, "%d.%m.%Y") 
+        return birth_date <= today
 
 class Record:
     def __init__(self, name):
@@ -148,8 +151,6 @@ def add_contact(args, book: AddressBook):
     name, phone, *_ = args
     if not isinstance(name, str) or name.isdigit():
         return "Invalid name. It should be a non-numeric text."
-    if not phone.isdigit():
-        return "Invalid phone number. It should contain only digits."
     record = book.find(name)
     if record:
         record.add_phone(phone)
@@ -164,9 +165,6 @@ def add_contact(args, book: AddressBook):
 @input_error
 # Функція, що змінює номер телефону користувача 
 def change_contact(args, book: AddressBook):
-    if len(args) < 3:
-        return "Please provide a name, old phone, and new phone."
-
     name, old_phone, new_phone, *_ = args
     if not isinstance(name, str) or name.isdigit():
         return "Invalid name. It should be a non-numeric text."
@@ -200,7 +198,8 @@ def show_all(book):
     result = ''
     for record in book.values():
         phones = ", ".join(p.value for p in record.phones) if record.phones else "No phone numbers"
-        result += f"{record.name.value}: {phones}\n"
+        birthday = record.birthday.value if record.birthday else "No birthday set"
+        result += f"{record.name.value}: {phones}, Birthday: {birthday}\n"
     return result 
 
 @input_error
