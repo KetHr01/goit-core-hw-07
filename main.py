@@ -21,18 +21,18 @@ class Phone(Field):
 class Birthday(Field):
     def __init__(self, value):
         try:
-            datetime.strptime(value, "%d.%m.%Y")  
+            birth_date = datetime.strptime(value, "%d.%m.%Y")  
         except ValueError:
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
+        
+        if birth_date.date() > date.today():
+            raise ValueError("Birthday cannot be in the future.")
+        
         super().__init__(value)  
 
     def __str__(self):
-        return self.value
-    def is_valid(self):
-        # Перевірка чи дата народження не знаходиться в майбутньому
-        today = datetime.now()
-        birth_date = datetime.strptime(self.value, "%d.%m.%Y") 
-        return birth_date <= today
+        return self.value  # Повертаємо рядок у форматі DD.MM.YYYY
+
 
 class Record:
     def __init__(self, name):
@@ -42,13 +42,6 @@ class Record:
 
     def add_birthday(self, birthday):
         if isinstance(birthday, Birthday):
-            if not birthday.is_valid():
-                raise ValueError("Birthday cannot be in the future.")
-            self.birthday = birthday
-        elif isinstance(birthday, str):
-            birthday = Birthday(birthday)
-            if not birthday.is_valid():
-                raise ValueError("Birthday cannot be in the future.")
             self.birthday = birthday
         else:
             raise ValueError("Birthday must be a string in DD.MM.YYYY format or a Birthday object.")
@@ -105,10 +98,11 @@ class AddressBook(UserDict):
         
     def get_upcoming_birthdays(self, days=7):
         upcoming_birthdays = []
-        today = datetime.today()
+        today = datetime.today().date()
         for record in self.data.values():
             if record.birthday:
-                birthday_this_year = record.birthday.date.replace(year = today.year)
+                birth_date = datetime.strptime(record.birthday.value, "%d.%m.%Y").date()
+                birthday_this_year = birth_date.replace(year=today.year)
                 if 0 <= (birthday_this_year - today).days <= days:
                     congratulation_date = birthday_this_year
                     if congratulation_date.weekday() in [5,6]:
@@ -196,7 +190,7 @@ def show_all(book):
     if not book:
         return "No contacts available."
     result = ''
-    for record in book.values():
+    for record in book.data.values():
         phones = ", ".join(p.value for p in record.phones) if record.phones else "No phone numbers"
         birthday = record.birthday.value if record.birthday else "No birthday set"
         result += f"{record.name.value}: {phones}, Birthday: {birthday}\n"
@@ -209,7 +203,7 @@ def add_birthday(args, book: AddressBook):
     if record is None:
         return f"There is no such user {name}."
     try:
-        record.add_birthday(birthday)
+        record.add_birthday(Birthday(birthday))
         return f"Birthday added for {name}: {birthday}"
     except ValueError as e:
         return str(e)
